@@ -1,8 +1,32 @@
 import os
+import subprocess
 from datetime import datetime
 
-FILE_NAME = 'work_hours.typ'
-TEMP_FILE_NAME = 'temp_work_hours.txt'
+# Define the work_hours directory in the user's home directory
+HOME_DIR = os.path.expanduser('~')
+WORK_HOURS_DIR = os.path.join(HOME_DIR, '.work_hours')
+
+# Ensure the work_hours directory exists
+os.makedirs(WORK_HOURS_DIR, exist_ok=True)
+
+# Define file paths
+FILE_NAME = os.path.join(WORK_HOURS_DIR, 'hours_2025.typ')
+TEMP_FILE_NAME = os.path.join(WORK_HOURS_DIR, 'tmp_2025.txt')
+PDF_OUTPUT_PATH = os.path.join(HOME_DIR, 'output/path/output.pdf')
+
+def compile_typst():
+    """Compile the Typst file into a PDF."""
+    try:
+        # Run the Typst compilation command
+        subprocess.run(
+            ['typst', 'compile', FILE_NAME, PDF_OUTPUT_PATH],
+            check=True
+        )
+        print(f"PDF compiled successfully: {PDF_OUTPUT_PATH}")
+    except FileNotFoundError:
+        print("Typst is not installed or not in PATH. Ensure Typst is installed.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error during Typst compilation: {e}")
 
 def add_task(total_hours):
     """Add a new work task and update total hours."""
@@ -13,9 +37,12 @@ def add_task(total_hours):
     except ValueError:
         print("Invalid date format. Please try again.")
         return total_hours
-    
+
+    hours_input = input("Enter the number of hours worked (can be negative): ")
+    # Replace comma with dot to handle inputs like '3,5'
+    hours_input = hours_input.replace(',', '.')
     try:
-        hours_worked = float(input("Enter the number of hours worked (can be negative): "))
+        hours_worked = float(hours_input)
     except ValueError:
         print("Invalid input for hours. Please enter a valid number.")
         return total_hours
@@ -37,27 +64,29 @@ def generate_typst_file():
 
     with open(TEMP_FILE_NAME, 'r') as file:
         tasks = file.readlines()
-    
+
     with open(FILE_NAME, 'w') as file:
         file.write('#set page (columns:3)\n')
-        file.write('#set text(font: "Lato",\n')
-        file.write('size:10pt)\n')
-        file.write('=== Work hours!\n')
+        file.write('#set text(font: "Karumbi", size:10pt)\n')
+        file.write('=== 2025\n')
         file.write('#table(\n')
         file.write('columns: 3,\n')
+        file.write('stroke:none,\n')
         file.write('align: (left, center, right),\n')
         file.write('inset: 5pt,\n')
         file.write('[*dag*], [*timmar*], [*akkum*],\n')
-          
+
         for task in tasks:
             date, hours_worked, total_hours = task.strip().split(',')
-            file.write(f'[ {date}],[{hours_worked}],[{total_hours}],\n')
+            file.write(f'[ {date} ],[ {hours_worked} ],[ {total_hours} ],\n')
         file.write(')')
 
+        # Assuming the last total_hours is the cumulative total
         total_hours = float(total_hours.strip())
-        file.write(f'\n\ntotalt 2024: *{total_hours:.2f}* timmar\n')
+        file.write(f'\n\ntotalt 2025: *{total_hours:.2f}* timmar\n')
 
     print(f"Typst file generated: {FILE_NAME}")
+    compile_typst()
 
 def view_tasks():
     """Display all recorded tasks and generate Typst file."""
@@ -78,31 +107,27 @@ def view_tasks():
             date, hours_worked, total = task.strip().split(',')
             print(f"{i}. Date: {date}, Hours: {hours_worked}, Total: {total}")
 
-        total_hours = float(total.strip())
+        # Get the last total_hours from the last task
+        last_task = tasks[-1]
+        _, _, total_hours = last_task.strip().split(',')
 
-    print(f"\nCurrent Total Hours Worked: {total_hours:.2f}")
+    print(f"\nCurrent Total Hours Worked: {float(total_hours):.2f}")
     generate_typst_file()
-    return total_hours
+    return float(total_hours)
 
 def main():
-    # Initialize total hours from file
-    total_hours = 0.0
-    if os.path.exists(TEMP_FILE_NAME):
-        total_hours = view_tasks()
+    total_hours = 0.0  # Initialize total hours
 
     while True:
-        print("\nWork Hours Tracker - Add a New Task")
-        total_hours = add_task(total_hours)
-
         print("\nChoose an option:")
-        print("1. Add another task")
+        print("1. Add a new task")
         print("2. View all tasks and generate Typst file")
         print("3. Exit")
 
         choice = input("Choose an option (1-3): ")
 
         if choice == '1':
-            continue
+            total_hours = add_task(total_hours)
         elif choice == '2':
             total_hours = view_tasks()
         elif choice == '3':
