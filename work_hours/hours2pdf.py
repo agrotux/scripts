@@ -4,7 +4,7 @@ from datetime import datetime
 
 # Define the work_hours directory in the user's home directory
 HOME_DIR = os.path.expanduser('~')
-WORK_HOURS_DIR = os.path.join(HOME_DIR, '.work_hours')
+WORK_HOURS_DIR = os.path.join(HOME_DIR, '.tmp_directory')
 
 # Ensure the work_hours directory exists
 os.makedirs(WORK_HOURS_DIR, exist_ok=True)
@@ -12,7 +12,7 @@ os.makedirs(WORK_HOURS_DIR, exist_ok=True)
 # Define file paths
 FILE_NAME = os.path.join(WORK_HOURS_DIR, 'hours_2025.typ')
 TEMP_FILE_NAME = os.path.join(WORK_HOURS_DIR, 'tmp_2025.txt')
-PDF_OUTPUT_PATH = os.path.join(HOME_DIR, 'output/path/output.pdf')
+PDF_OUTPUT_PATH = os.path.join(HOME_DIR, 'output/out_pdf.pdf')
 
 def compile_typst():
     """Compile the Typst file into a PDF."""
@@ -28,18 +28,29 @@ def compile_typst():
     except subprocess.CalledProcessError as e:
         print(f"Error during Typst compilation: {e}")
 
-def add_task(total_hours):
+def add_task(_):
     """Add a new work task and update total hours."""
+    total_hours = 0.0
+
+    # Read the last total from the file, if it exists
+    if os.path.exists(TEMP_FILE_NAME):
+        with open(TEMP_FILE_NAME, 'r') as file:
+            lines = file.readlines()
+            if lines:
+                try:
+                    *_, last_total = lines[-1].strip().split(',')
+                    total_hours = float(last_total)
+                except ValueError:
+                    print("Error parsing last total from file. Starting from 0.")
+
     date = input("Enter the date (MM-DD): ")
     try:
-        # Validate date format
         datetime.strptime(date, '%m-%d')
     except ValueError:
         print("Invalid date format. Please try again.")
         return total_hours
 
     hours_input = input("Enter the number of hours worked (can be negative): ")
-    # Replace comma with dot to handle inputs like '3,5'
     hours_input = hours_input.replace(',', '.')
     try:
         hours_worked = float(hours_input)
@@ -49,7 +60,6 @@ def add_task(total_hours):
 
     total_hours += hours_worked
 
-    # Append new entry to temp file
     with open(TEMP_FILE_NAME, 'a') as file:
         line = f"{date},{hours_worked},{total_hours}\n"
         file.write(line)
@@ -67,7 +77,7 @@ def generate_typst_file():
 
     with open(FILE_NAME, 'w') as file:
         file.write('#set page (columns:3)\n')
-        file.write('#set text(font: "Karumbi", size:10pt)\n')
+        file.write('#set text(font: "Free Sans", size:10pt)\n')
         file.write('=== 2025\n')
         file.write('#table(\n')
         file.write('columns: 3,\n')
