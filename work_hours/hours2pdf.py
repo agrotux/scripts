@@ -76,7 +76,7 @@ def generate_typst_file():
         tasks = file.readlines()
 
     with open(FILE_NAME, 'w') as file:
-        file.write('#set page (columns:3)\n')
+        file.write('#set page(columns:3)\n')
         file.write('#set text(font: "Free Sans", size:10pt)\n')
         file.write('=== 2025\n')
         file.write('#table(\n')
